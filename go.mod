@@ -4,6 +4,7 @@ go 1.19
 
 require (
 	github.com/alecthomas/kingpin/v2 v2.3.2
+	github.com/jmoiron/sqlx v1.3.5
 	github.com/rs/zerolog v1.30.0
 )
 
