@@ -13,8 +13,8 @@ import (
 	"github.com/alecthomas/kingpin/v2"
 	"github.com/gin-gonic/gin"
 	"github.com/lzzzzl/page-turner-pro/internal/app"
-	"github.com/lzzzzl/page-turner-pro/internal/handlers"
-	"github.com/lzzzzl/page-turner-pro/internal/router"
+	"github.com/lzzzzl/page-turner-pro/internal/app/handlers"
+	"github.com/lzzzzl/page-turner-pro/internal/app/middleware"
 	"github.com/rs/zerolog"
 )
 
@@ -50,7 +50,7 @@ func runHTTPServer(rootCtx context.Context, wg *sync.WaitGroup, port int, app *a
 	ginRouter := gin.New()
 
 	// Set general middleware
-	router.SetGeneralMiddlewares(rootCtx, ginRouter)
+	middleware.SetGeneralMiddlewares(rootCtx, ginRouter)
 
 	// Register all handlers
 	handlers.RegisterHandlers(ginRouter, app)
