@@ -84,6 +84,35 @@ func downPostgresDB() (*sqlx.DB, error) {
 	return db, nil
 }
 
+func truncateAllData() (*sqlx.DB, error) {
+	db, err := getPostgresDB()
+	if err != nil {
+		return nil, errors.WithMessage(err, "failed to start postgres container")
+	}
+	template := `
+		CREATE OR REPLACE FUNCTION truncate_all_tables() RETURNS void AS $$
+		DECLARE
+			statements CURSOR FOR
+				SELECT tablename FROM %s.pg_catalog.pg_tables
+				WHERE schemaname = 'public' AND tablename != 'schema_migrations';
+		BEGIN
+			FOR stmt IN statements LOOP
+				EXECUTE 'TRUNCATE TABLE ' || quote_ident(stmt.tablename) || ' RESTART IDENTITY CASCADE;';
+			END LOOP;
+		END
+		$$ LANGUAGE plpgsql;
+		SELECT truncate_all_tables();
+	`
+
+	script := fmt.Sprintf(template, postgresName)
+	_, err = db.Exec(script)
+	if err != nil {
+		return nil, errors.WithMessage(err, "failed to truncate all data")
+	}
+
+	return db, nil
+}
+
 func TestGetPostgresDB(t *testing.T) {
 	db, err := getPostgresDB()
 
@@ -100,6 +129,13 @@ func TestUpPostgresDB(t *testing.T) {
 
 func TestDownPostgresDB(t *testing.T) {
 	db, err := downPostgresDB()
+
+	assert.NotNil(t, db)
+	assert.NoError(t, err)
+}
+
+func TestTruncateAllData(t *testing.T) {
+	db, err := truncateAllData()
 
 	assert.NotNil(t, db)
 	assert.NoError(t, err)
