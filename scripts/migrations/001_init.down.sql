@@ -1,1 +1,4 @@
 DROP TABLE IF EXISTS users;
+DROP TABLE IF EXISTS books;
+DROP TABLE IF EXISTS book_copies;
+DROP TABLE IF EXISTS borrowed_books;

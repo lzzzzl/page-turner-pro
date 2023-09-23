@@ -1,5 +1,7 @@
 package model
 
+import "time"
+
 type BookStatus int
 
 const (
@@ -9,7 +11,16 @@ const (
 )
 
 type BookCopies struct {
-	ID     int
-	BookID int
-	Status BookStatus
+	ID        int
+	BookID    int
+	Status    BookStatus
+	CreatedAt time.Time
+	UpdatedAt time.Time
+}
+
+func NewBookCopies(bookID int, status BookStatus) BookCopies {
+	return BookCopies{
+		ID:     bookID,
+		Status: status,
+	}
 }
