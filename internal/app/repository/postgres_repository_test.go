@@ -1,10 +1,13 @@
 package repository
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"testing"
+	"time"
 
+	"github.com/go-testfixtures/testfixtures/v3"
 	"github.com/golang-migrate/migrate/v4"
 	_ "github.com/golang-migrate/migrate/v4/database/postgres"
 	_ "github.com/golang-migrate/migrate/v4/source/file"
@@ -12,6 +15,7 @@ import (
 	_ "github.com/lib/pq"
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 var postgresDB *sqlx.DB
@@ -84,11 +88,7 @@ func downPostgresDB() (*sqlx.DB, error) {
 	return db, nil
 }
 
-func truncateAllData() (*sqlx.DB, error) {
-	db, err := getPostgresDB()
-	if err != nil {
-		return nil, errors.WithMessage(err, "failed to start postgres container")
-	}
+func truncateAllData(t *testing.T, db *sqlx.DB) error {
 	template := `
 		CREATE OR REPLACE FUNCTION truncate_all_tables() RETURNS void AS $$
 		DECLARE
@@ -105,12 +105,34 @@ func truncateAllData() (*sqlx.DB, error) {
 	`
 
 	script := fmt.Sprintf(template, postgresName)
-	_, err = db.Exec(script)
+	_, err := db.Exec(script)
 	if err != nil {
-		return nil, errors.WithMessage(err, "failed to truncate all data")
+		return errors.WithMessage(err, "failed to truncate all data")
 	}
 
-	return db, nil
+	return nil
+}
+
+func initRepository(t *testing.T, db *sqlx.DB, files ...string) (repo *PostgresRepository) {
+	// Truncate existing records in all tables
+	err := truncateAllData(t, db)
+	assert.NoError(t, err)
+
+	// Setup DB again
+	loader, err := testfixtures.New(
+		testfixtures.Database(db.DB),
+		testfixtures.Dialect("postgres"),
+		testfixtures.Location(time.UTC),
+		// Load predefined Data
+		testfixtures.Files(files...),
+		testfixtures.DangerousSkipTestDatabaseCheck(),
+	)
+	require.NoError(t, err)
+
+	err = loader.Load()
+	require.NoError(t, err)
+
+	return NewPostgresRepository(context.Background(), db)
 }
 
 func TestGetPostgresDB(t *testing.T) {
@@ -135,8 +157,10 @@ func TestDownPostgresDB(t *testing.T) {
 }
 
 func TestTruncateAllData(t *testing.T) {
-	db, err := truncateAllData()
-
+	db, err := getPostgresDB()
 	assert.NotNil(t, db)
+	assert.NoError(t, err)
+
+	err = truncateAllData(t, db)
 	assert.NoError(t, err)
 }

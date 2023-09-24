@@ -2,6 +2,7 @@ package repository
 
 import (
 	"context"
+	"fmt"
 	"strings"
 	"time"
 
@@ -11,11 +12,11 @@ import (
 
 type repoUser struct {
 	ID        int       `db:"id"`
-	UID       string    `db:"string"`
-	Email     string    `db:"string"`
-	Name      string    `db:"string"`
+	UID       string    `db:"uid"`
+	Email     string    `db:"email"`
+	Name      string    `db:"name"`
 	CreatedAt time.Time `db:"created_at"`
-	UpdatedAt time.Time `db:"update_at"`
+	UpdatedAt time.Time `db:"updated_at"`
 }
 
 type repoColumnPatternUser struct {
@@ -50,9 +51,29 @@ func (c *repoColumnPatternUser) columns() string {
 }
 
 func (r *PostgresRepository) CreateUser(ctx context.Context, param model.User) (*model.User, common.Error) {
-	// insert := map[string]interface{}{
-	// 	repoColumnUser.Name: param.Name,
+	insert := map[string]interface{}{
+		repoColumnUser.Name:  param.Name,
+		repoColumnUser.UID:   param.UID,
+		repoColumnUser.Email: param.Email,
+		repoColumnUser.Name:  param.Name,
+	}
 
-	// }
-	return nil, nil
+	// build SQL query
+	query, args, err := r.pgsq.Insert(repoTableUser).
+		SetMap(insert).
+		Suffix(fmt.Sprintf("returning %s", repoColumnUser.columns())).
+		ToSql()
+	if err != nil {
+		return nil, common.NewError(common.ErrorCodeInternalProcess, err)
+	}
+
+	// execute SQL query
+	var row repoUser
+	if err = r.db.GetContext(ctx, &row, query, args...); err != nil {
+		return nil, common.NewError(common.ErrorCodeRemoteProcess, err)
+	}
+
+	user := model.User(row)
+
+	return &user, nil
 }
