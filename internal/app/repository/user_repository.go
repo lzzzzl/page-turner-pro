@@ -2,10 +2,13 @@ package repository
 
 import (
 	"context"
+	"database/sql"
+	"errors"
 	"fmt"
 	"strings"
 	"time"
 
+	sq "github.com/Masterminds/squirrel"
 	"github.com/lzzzzl/page-turner-pro/internal/domain/common"
 	"github.com/lzzzzl/page-turner-pro/internal/domain/model"
 )
@@ -77,3 +80,89 @@ func (r *PostgresRepository) CreateUser(ctx context.Context, param model.User) (
 
 	return &user, nil
 }
+
+func (r *PostgresRepository) GetUserByID(ctx context.Context, id int) (*model.User, common.Error) {
+	where := sq.And{
+		sq.Eq{repoColumnUser.ID: id},
+	}
+
+	// build SQL query
+	query, args, err := r.pgsq.Select(repoColumnUser.columns()).
+		From(repoTableUser).
+		Where(where).
+		Limit(1).
+		ToSql()
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, common.NewError(common.ErrorCodeResourceNotFound, err)
+		}
+		return nil, common.NewError(common.ErrorCodeInternalProcess, err)
+	}
+
+	// execute SQL query
+	var row repoUser
+	if err = r.db.GetContext(ctx, &row, query, args...); err != nil {
+		return nil, common.NewError(common.ErrorCodeRemoteProcess, err)
+	}
+
+	user := model.User(row)
+	return &user, nil
+}
+
+func (r *PostgresRepository) GetUserByEmail(ctx context.Context, email string) (*model.User, common.Error) {
+	where := sq.And{
+		sq.Eq{repoColumnUser.Email: email},
+	}
+
+	// build SQL query
+	query, args, err := r.pgsq.Select(repoColumnUser.columns()).
+		From(repoTableUser).
+		Where(where).
+		Limit(1).
+		ToSql()
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, common.NewError(common.ErrorCodeResourceNotFound, err)
+		}
+		return nil, common.NewError(common.ErrorCodeInternalProcess, err)
+	}
+
+	// execute SQL query
+	var row repoUser
+	if err = r.db.GetContext(ctx, &row, query, args...); err != nil {
+		return nil, common.NewError(common.ErrorCodeRemoteProcess, err)
+	}
+
+	user := model.User(row)
+	return &user, nil
+}
+
+func (r *PostgresRepository) GetAllUsers(ctx context.Context) ([]*model.User, common.Error) {
+	where := sq.And{}
+
+	// build SQL query
+	query, args, err := r.pgsq.Select(repoColumnUser.columns()).
+		From(repoTableUser).
+		Where(where).
+		OrderBy(fmt.Sprintf("%s desc", repoColumnUser.CreatedAt)).
+		ToSql()
+	if err != nil {
+		return nil, common.NewError(common.ErrorCodeInternalProcess, err)
+	}
+
+	// execute SQL query
+	var rows []repoUser
+	if err = r.db.SelectContext(ctx, &rows, query, args...); err != nil {
+		return nil, common.NewError(common.ErrorCodeRemoteProcess, err)
+	}
+
+	var users []*model.User
+	for _, row := range rows {
+		user := model.User(row)
+		users = append(users, &user)
+	}
+
+	return users, nil
+}
+
+// func (r *PostgresRepository) UpdateUser(ctx context.Context, param model.User) ()

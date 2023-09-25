@@ -8,7 +8,7 @@ import (
 var basepath string
 
 const (
-	TestDataUser = "user.yaml"
+	TestDataUser = "users.yaml"
 )
 
 func init() {
