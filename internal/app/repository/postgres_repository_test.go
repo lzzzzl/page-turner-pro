@@ -20,7 +20,7 @@ import (
 
 var postgresDB *sqlx.DB
 
-func getPostgresDB() (*sqlx.DB, error) {
+func getPostgresDB() *sqlx.DB {
 	connStr := fmt.Sprintf("user=%s dbname=%s sslmode=disable password=%s",
 		postgresName, postgresName, postgresName)
 
@@ -33,7 +33,7 @@ func getPostgresDB() (*sqlx.DB, error) {
 	postgresDB.SetMaxOpenConns(100)
 	postgresDB.SetMaxIdleConns(10)
 
-	return postgresDB, nil
+	return postgresDB
 }
 
 // migrationSourcePath is a relative path to the collection storing all migration scripts
@@ -41,10 +41,7 @@ const migrationSourcePath = "file://../../../scripts/migrations"
 const postgresName = "page_turner_pro"
 
 func upPostgresDB() (*sqlx.DB, error) {
-	db, err := getPostgresDB()
-	if err != nil {
-		return nil, errors.WithMessage(err, "failed to start postgres container")
-	}
+	db := getPostgresDB()
 
 	// migrate postgres
 	localHostPostgresDSN := fmt.Sprintf(
@@ -65,10 +62,7 @@ func upPostgresDB() (*sqlx.DB, error) {
 }
 
 func downPostgresDB() (*sqlx.DB, error) {
-	db, err := getPostgresDB()
-	if err != nil {
-		return nil, errors.WithMessage(err, "failed to start postgres container")
-	}
+	db := getPostgresDB()
 
 	// migrate postgres
 	localHostPostgresDSN := fmt.Sprintf(
@@ -136,10 +130,9 @@ func initRepository(t *testing.T, db *sqlx.DB, files ...string) (repo *PostgresR
 }
 
 func TestGetPostgresDB(t *testing.T) {
-	db, err := getPostgresDB()
+	db := getPostgresDB()
 
 	assert.NotNil(t, db)
-	assert.NoError(t, err)
 }
 
 func TestUpPostgresDB(t *testing.T) {
@@ -157,10 +150,9 @@ func TestDownPostgresDB(t *testing.T) {
 }
 
 func TestTruncateAllData(t *testing.T) {
-	db, err := getPostgresDB()
+	db := getPostgresDB()
 	assert.NotNil(t, db)
-	assert.NoError(t, err)
 
-	err = truncateAllData(t, db)
+	err := truncateAllData(t, db)
 	assert.NoError(t, err)
 }
